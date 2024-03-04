@@ -68,7 +68,7 @@ class Auth extends V1 {
     if (count.idCnt > 0) {
       throw new CommonApi.ResponseException(-2, "이미 사용중인 ID입니다.");
     }
-    if (count.sidCnt > 0) {
+    if (request.sid != 9999 && count.sidCnt > 0) {
       throw new CommonApi.ResponseException(
         -3,
         "이미 가입된 학번입니다.\n자신이 가입한 적이 없다면 관리자에게 문의하세요."
