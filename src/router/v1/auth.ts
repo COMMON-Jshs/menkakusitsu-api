@@ -81,8 +81,8 @@ class Auth extends V1 {
       );
     }
     await CommonApi.runAsync(
-      "INSERT INTO user (sid, name, email, id, password, state) VALUES (?, ?, ?, ?, ?)",
-      [request.sid, request.name, request.email, request.id, request.password]
+      "INSERT INTO user (sid, name, email, id, password, state) VALUES (?, ?, ?, ?, ?, ?)",
+      [request.sid, request.name, request.email, request.id, request.password, 0]
     );
     const response: v1.PostRegisterResponse = {
       status: 0,
