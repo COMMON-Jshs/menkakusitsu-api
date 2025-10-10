@@ -47,6 +47,38 @@ export const flushSpecialroom = async () => {
   );
 };
 
+
+export const flushElectronicDevice = async () => {
+  try {
+    const specialrooms = await CommonApi.getAllAsync(
+      "SELECT * FROM (SELECT applyId, GROUP_CONCAT(name) as students FROM (SELECT electronicdevice_apply_student.applyId, user.name FROM electronicdevice_apply_student, user WHERE electronicdevice_apply_student.studentUid = user.uid) AS A GROUP BY A.applyId) AS B, electronicdevice_apply WHERE B.applyId = electronicdevice_apply.applyId",
+      []
+    );
+    for (const specialroom of specialrooms) {
+      await CommonApi.runAsync(
+        "INSERT INTO electronicdevice_cache (applyId, teacherUid, location, purpose, students, createdDate) VALUES (?, ?, ?, ?, ?, CURDATE())",
+        [
+          specialroom.applyId,
+          specialroom.teacherUid,
+          specialroom.location,
+          specialroom.purpose,
+          specialroom.students,
+        ]
+      );
+    }
+  } catch (err) {
+    CommonApi.logger.error(err);
+  }
+
+  await CommonApi.runAsync("DELETE FROM electronicdevice_apply");
+  await CommonApi.runAsync("ALTER TABLE electronicdevice_apply AUTO_INCREMENT=1");
+  await CommonApi.runAsync(
+    "ALTER TABLE electronicdevice_apply_student AUTO_INCREMENT=1"
+  );
+};
+
+
+
 export const flushDeletedBbsContent = async () => {
   await CommonApi.runAsync(
     "DELETE FROM bbs_post WHERE deletedDate >= NOW() - INTERVAL 3 MONTH"

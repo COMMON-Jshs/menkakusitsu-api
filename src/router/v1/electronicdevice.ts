@@ -4,29 +4,31 @@ import { Request, Response } from "express";
 
 import V1 from "@/router/v1";
 import { Api, Utility, Sanitizer } from "@/utils";
+import { GetElecDeviceApplyResponse } from "@common-jshs/menkakusitsu-lib/dist/v1";
 
 class Specialroom extends V1 {
   constructor() {
     super();
-    this.setPath("/specialroom");
+    this.setPath("/electronicdevice");
     this.models = [
       {
         method: "get",
         path: "/apply",
         authType: "access",
-        controller: this.onGetApply,
+        controller: this.onGetElectronicDeviceApply,
       },
       {
         method: "post",
         path: "/apply",
         authType: "access",
-        controller: this.onPostApply,
+        controller: this.onPostElectronicDeviceApply,
+
       },
       {
         method: "delete",
         path: "/apply",
         authType: "access",
-        controller: this.onDeleteApply,
+        controller: this.onDeleteElectronicDeviceApply,
       },
       {
         method: "get",
@@ -44,14 +46,14 @@ class Specialroom extends V1 {
         method: "get",
         path: "/info",
         authType: "optional",
-        controller: this.onGetSpecialroomInfo,
+        controller: this.onGetElectronicDeviceInfo,
       },
       {
         method: "put",
         path: "/info",
         authType: "access",
         permission: Permission.Teacher,
-        controller: this.onPutSpecialroomInfo,
+        controller: this.onPutElectronicDeviceInfo, //onPutSpecialroomInfo
       },
       {
         method: "get",
@@ -86,46 +88,48 @@ class Specialroom extends V1 {
     ];
   }
 
-  async onGetApply(req: Request, res: Response) {
-    const request: v1.GetApplyRequest = req.query as any;
-    if (!Sanitizer.sanitizeRequest(request, "GetApplyRequest")) {
+  async onGetElectronicDeviceApply(req: Request, res: Response) {
+    const request: v1.GetElecDeviceApplyRequest = req.query as any;
+    if (!Sanitizer.sanitizeRequest(request, "GetElectronicDeviceApplyRequest")) {
       throw new CommonApi.HttpException(400);
     }
 
     const payload = Utility.getJwtPayload(req.headers.authorization!);
-    const specialroomInfo = await Api.getSpecialroomInfo(
+    const electronicdeviceInfo = await Api.getElectronicDeviceInfo(
       request.when,
       payload.uid
     );
-    if (!specialroomInfo) {
+    if (!electronicdeviceInfo) {
       throw new CommonApi.ResponseException(
         1,
         `${request.when}차 때 신청한 특별실이 없습니다.`
       );
     }
-    const response: v1.GetApplyResponse = {
+    console.log(electronicdeviceInfo);
+    const response: GetElecDeviceApplyResponse = {
       status: 0,
       message: "",
-      specialroomInfo: specialroomInfo,
+      deviceInfo : electronicdeviceInfo,
     };
     res.status(200).json(response);
   }
 
-  async onPostApply(req: Request, res: Response) {
-    const request: v1.PostApplyRequest = req.body;
-    if (!Sanitizer.sanitizeRequest(request, "PostApplyRequest")) {
-      throw new CommonApi.HttpException(400);
+  async onPostElectronicDeviceApply(req: Request, res: Response) {
+    const request: v1.PostElecDeviceApplyRequest = req.body;
+    
+    if (!Sanitizer.sanitizeRequest(request, "PostDeviceApplyRequest")) {
+        throw new CommonApi.HttpException(400);
     }
 
     for (const applicant of request.applicants) {
-      const specialroomInfo = await Api.getSpecialroomInfo(
+        const electronicdeviceInfo = await Api.getElectronicDeviceInfo(
         request.when,
         applicant.uid
       );
-      if (specialroomInfo) {
+      if (electronicdeviceInfo) {
         throw new CommonApi.ResponseException(
           -1,
-          `${applicant.value} 학생은 ${request.when}차 특별실을 이미 신청했습니다! (중복 신청 방지)`
+          `${applicant.value} 학생은 ${request.when}차 전자기기 이미 신청했습니다! (중복 신청 방지)`
         );
       }
     }
@@ -134,11 +138,11 @@ class Specialroom extends V1 {
     // postApplyRequest.purpose += "(선생님이 신청)";
     // }
     const insertApply = await CommonApi.runAsync(
-      "INSERT INTO specialroom_apply(teacherUid, masterUid, location, purpose, `when`, isApproved) VALUE(?, ?, ?, ?, ?, ?)",
+      "INSERT INTO electronicdevice_apply(teacherUid, masterUid, deviceId, purpose, `when`, isApproved) VALUE(?, ?, ?, ?, ?, ?)",
       [
         request.teacherUid,
         payload.uid,
-        request.location,
+        request.deviceId,
         request.purpose,
         request.when,
         payload.hasPermission(Permission.Teacher),
@@ -147,7 +151,7 @@ class Specialroom extends V1 {
     const applyId = insertApply.insertId;
     request.applicants.forEach((applicant) => {
       CommonApi.runAsync(
-        "INSERT INTO specialroom_apply_student(applyId, studentUid) VALUE(?, ?)",
+        "INSERT INTO electronicdevice_apply_student(applyId, studentUid) VALUE(?, ?)",
         [applyId, applicant.uid]
       );
     });
@@ -158,7 +162,7 @@ class Specialroom extends V1 {
             if (!specialroomInfo) {
                 throw new CommonApi.HttpException(500);
             }*/
-    const response: v1.PostApplyResponse = {
+    const response: v1.PostElecDeviceApplyResponse = {
       status: 0,
       message: "",
       // specialroomInfo: specialroomInfo,
@@ -166,25 +170,25 @@ class Specialroom extends V1 {
     res.status(200).json(response);
   }
 
-  async onDeleteApply(req: Request, res: Response) {
-    const request: v1.DeleteApplyRequest = req.body;
-    if (!Sanitizer.sanitizeRequest(request, "DeleteApplyRequest")) {
+  async onDeleteElectronicDeviceApply(req: Request, res: Response) {
+    const request: v1.DeleteElecDeviceApplyRequest = req.body;
+    if (!Sanitizer.sanitizeRequest(request, "DeleteApplyElectronicDeviceRequest")) {
       throw new CommonApi.HttpException(400);
     }
 
     const payload = Utility.getJwtPayload(req.headers.authorization!);
-    const specialroomInfo = await Api.getSpecialroomInfo(
+    const electronicdeviceInfo = await Api.getElectronicDeviceInfo(
       request.when,
       payload.uid
     );
-    if (!specialroomInfo) {
+    if (!electronicdeviceInfo) {
       throw new CommonApi.ResponseException(
         -1,
-        `${request.when}차 때 특별실을 신청하지 않으셨습니다.`
+        `${request.when}차 때 전자기기를 신청하지 않으셨습니다.`
       );
     }
-    await CommonApi.runAsync("DELETE FROM specialroom_apply WHERE applyId=?", [
-      specialroomInfo.applyId,
+    await CommonApi.runAsync("DELETE FROM electronicdevice_apply WHERE applyId=?", [
+      electronicdeviceInfo.applyId,
     ]);
     const response: v1.DeleteApplyResponse = {
       status: 0,
@@ -267,9 +271,9 @@ class Specialroom extends V1 {
     res.status(200).json(response);
   }
 
-  async onGetSpecialroomInfo(req: Request, res: Response) {
-    const request: v1.GetInfoRequest = req.query as any;
-    if (!Sanitizer.sanitizeRequest(request, "GetInfoRequest")) {
+  async onGetElectronicDeviceInfo(req: Request, res: Response) {
+    const request: v1.GetDeviceInfoRequest = req.query as any;
+    if (!Sanitizer.sanitizeRequest(request, "GetDeviceInfoRequest")) {
       throw new CommonApi.HttpException(400);
     }
 
@@ -277,8 +281,8 @@ class Specialroom extends V1 {
       String(req.headers.authorization)
     );
 
-    const information = await Api.getSpecialrooms(isAuthed);
-    const response: v1.GetInfoResponse = {
+    const information = await Api.getElectronicDevice(isAuthed);
+    const response: v1.GetElecDeviceInfoResponse = {
       status: 0,
       message: "",
       information: information,
@@ -286,22 +290,22 @@ class Specialroom extends V1 {
     res.status(200).json(response);
   }
 
-  async onPutSpecialroomInfo(req: Request, res: Response) {
-    const request: v1.PutInfoRequest = req.body;
-    if (!Sanitizer.sanitizeRequest(request, "PutInfoRequest")) {
+  async onPutElectronicDeviceInfo(req: Request, res: Response) {
+    const request: v1.PutElecDeviceInfoRequest = req.body;
+    if (!Sanitizer.sanitizeRequest(request, "PutElectronicDeviceInfoRequest")) {
       throw new CommonApi.HttpException(400);
     }
-
-    for (const specialroomInfo of request.information) {
+    for (const electronicdeviceInfo of request.information) {
       await CommonApi.runAsync(
-        "UPDATE specialroom_apply SET isApproved=? WHERE applyId=?",
-        [specialroomInfo.state, specialroomInfo.applyId]
+        "UPDATE electronicdevice_apply SET isApproved=? WHERE applyId=?",
+        [electronicdeviceInfo.state, electronicdeviceInfo.applyId]
       );
     }
-    const response: v1.PutInfoResponse = {
+
+    const response: v1.PutElecDeviceInfoResponse = {
       status: 0,
       message: "",
-      information: await Api.getSpecialrooms(true),
+      information: await Api.getElectronicDevice(true),
     };
     res.status(200).json(response);
   }
@@ -423,10 +427,6 @@ class Specialroom extends V1 {
         value: "지구과학실(연구동)",
       },
       {
-        id: 21,
-        value: "학생 활동실",
-      },
-      {
         id: -1,
         value: "기타",
       },
@@ -448,15 +448,15 @@ class Specialroom extends V1 {
     const purposeInfo: v1.PurposeInfo[] = [
       {
         id: 100,
-        value: "수행 평가",
+        value: "R&E",
       },
       {
         id: 101,
-        value: "개인 공부",
+        value: "과제 연구",
       },
       {
         id: 102,
-        value: "그룹 스터디",
+        value: "개인 연구",
       },
       {
         id: 103,
@@ -468,23 +468,23 @@ class Specialroom extends V1 {
       },
       {
         id: 201,
-        value: "R&E",
+        value: "심층 면접",
       },
       {
         id: 300,
-        value: "과제연구",
+        value: "자기소개서 작성",
       },
       {
         id: 400,
-        value: "전람회",
+        value: "자연탐사",
       },
       {
         id: 401,
-        value: "동아리 활동",
+        value: "무한상상 STEAM",
       },
       {
         id: 500,
-        value: "컴퓨터 사용",
+        value: "그룹 스터디",
       },
       {
         id: -1,

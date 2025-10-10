@@ -1,4 +1,5 @@
 import CommonApi from "@ireves/common-api";
+import { MasterCodeInfo } from "@common-jshs/menkakusitsu-lib/dist/v1";
 import { v1 } from "@common-jshs/menkakusitsu-lib";
 import { UploadedFile } from "express-fileupload";
 import fs from "fs";
@@ -11,6 +12,7 @@ import { sendPush } from "@/firebase";
 import config from "@/config";
 import { escapeUserName } from "@/utils/Utility";
 import { DeletedUser } from "@/utils/Constant";
+import V1 from "@/router/v1";
 
 export type FileData = {
   name: string;
@@ -149,6 +151,26 @@ export const getBbsComment = async (
   return comment;
 };
 
+
+
+export const getCodeMasterInfo = async(codeType:string)=>{
+  const codeInfoLists = await CommonApi.getAllAsync(
+    "SELECT * FROM code_manager WHERE CODE_TYPE = ? ORDER BY CODE_ID", [codeType]
+  );
+  const codeInfos :MasterCodeInfo[] = [];
+  for(const codeinfo of codeInfoLists){
+    codeInfos.push({
+      id: codeinfo.id,
+      codeType: codeinfo.code_type,
+      codeId: codeinfo.code_id,
+      codeName: codeinfo.code_name,
+      bigo: codeinfo.bigo,
+    });
+  }
+  return codeInfos;
+};
+
+
 export const getSpecialrooms = async (isAuthed: boolean) => {
   const informationList = await CommonApi.getAllAsync(
     "SELECT * FROM (SELECT applyId, GROUP_CONCAT(name) AS applicants FROM (SELECT specialroom_apply_student.applyId, user.name FROM specialroom_apply_student, user WHERE specialroom_apply_student.studentUid = user.uid) AS A GROUP BY A.applyId) AS B, specialroom_apply WHERE B.applyId = specialroom_apply.applyId"
@@ -175,7 +197,7 @@ export const getSpecialrooms = async (isAuthed: boolean) => {
 
     information.master = master;
     information.teacher = teacher;
-
+  
     specialrooms.push({
       applyId: information.applyId,
       state: information.isApproved,
@@ -241,4 +263,86 @@ export const sendPushToUser = async (
       sendPush(push_token.token, title, body, link);
     }
   }
+};
+
+
+
+
+export const getElectronicDevice = async (isAuthed: boolean) => {
+  const informationList = await CommonApi.getAllAsync(
+    "SELECT * FROM (SELECT applyId, GROUP_CONCAT(name) AS applicants FROM (SELECT electronicdevice_apply_student.applyId, user.name FROM electronicdevice_apply_student, user WHERE electronicdevice_apply_student.studentUid = user.uid) AS A GROUP BY A.applyId) AS B, (SELECT code_type,code_id,code_name as devicename FROM code_manager) AS C, electronicdevice_apply WHERE B.applyId = electronicdevice_apply.applyId AND C.code_id = electronicdevice_apply.deviceId AND C.code_type = 'ELECTRONIC_TYPE'"
+  );
+  const electronicdevice: v1.ElecDeviceInfo[] = [];
+
+  const userInfo = await getUserInfoList();
+
+  for (const information of informationList) {
+    const master = findUserByUid(userInfo, information.masterUid);
+    master.value = "";
+
+    const teacher = findUserByUid(userInfo, information.teacherUid);
+    teacher.value = "";
+
+    if (!isAuthed) {
+      master.name = escapeUserName(master.name);
+      teacher.name = escapeUserName(teacher.name);
+      information.applicants = (information.applicants as string)
+        .split(",")
+        .map((name) => escapeUserName(name))
+        .join(",");
+    }
+
+    information.master = master;
+    information.teacher = teacher;
+  
+    electronicdevice.push({
+      applyId: information.applyId,
+      state: information.isApproved,
+      master: information.master,
+      teacher: information.teacher,
+      applicants: information.applicants,
+      deviceId: information.deviceId,
+      devicename: information.devicename,
+      purpose: information.purpose,
+      when: information.when,
+    });
+  }
+  return electronicdevice;
+};
+
+export const getElectronicDeviceInfo = async (
+  when: number,
+  applicantUid: number
+) => {
+  const electronicdevice_apply_student = await CommonApi.getAllAsync(
+    "SELECT applyId FROM electronicdevice_apply_student WHERE studentUid=?",
+    [applicantUid]
+  );
+  if (electronicdevice_apply_student.length === 0) {
+    return null;
+  }
+  for (const student of electronicdevice_apply_student) {
+    const applyId = student.applyId;
+    const apply = await CommonApi.getFirstAsync(
+      "SELECT teacherUid, masterUid, purpose, deviceId, GROUP_CONCAT(name) AS applicants, `when`, isApproved FROM user, electronicdevice_apply WHERE user.uid = ANY(SELECT studentUid FROM electronicdevice_apply_student WHERE applyId=? GROUP BY studentUid) AND electronicdevice_apply.applyId=? AND `when`=? GROUP BY teacherUid, masterUid, purpose, deviceId, `when`, isApproved",
+      [applyId, applyId, when]
+    );
+    if (!apply) {
+      continue;
+    }
+    const master = await getStudentInfo(apply.masterUid);
+    const teacher = await getTeacherInfo(apply.teacherUid);
+    return {
+      applyId: applyId,
+      state: apply.isApproved,
+      master: master,
+      teacher: teacher,
+      applicants: apply.applicants,
+      deviceId: apply.deviceId,
+      devicename: "",
+      purpose: apply.purpose,
+      when: apply.when,
+    };
+  }
+  return null;
 };

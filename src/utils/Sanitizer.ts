@@ -40,7 +40,13 @@ type RequestType =
   | "PutPasswordRequest"
   | "PostPushRequest"
   | "PutPushRequest"
-  | "DeletePushRequest";
+  | "DeletePushRequest"
+  | "GetDeviceInfoRequest"
+  | "PostDeviceApplyRequest"
+  | "GetElectronicDeviceApplyRequest"
+  | "DeleteApplyElectronicDeviceRequest"
+  | "PutElectronicDeviceInfoRequest";
+     
 
 export const sanitizeRequest = (
   request: unknown,
@@ -131,6 +137,17 @@ export const sanitizeRequest = (
       return sanitizePutPushRequest(request);
     case "DeletePushRequest":
       return sanitizeDeletePushRequest(request);
+    case "GetDeviceInfoRequest":
+      return sanitizeGetDevieInfoRequest(request);
+    case "PostDeviceApplyRequest":
+      return sanitizePostDeviceApplyRequest(request);
+    case "GetElectronicDeviceApplyRequest":
+      return sanitizeGetElectronicDeviceApplyRequest(request);
+    case "DeleteApplyElectronicDeviceRequest":
+      return sanitizeDeleteElectronicDeviceApplyRequest(request);
+    case "PutElectronicDeviceInfoRequest":
+      return sanitizePutElectronicDeviceInfoRequest(request);
+      //sanitizePutInfoRequest
   }
   return false;
 };
@@ -1428,6 +1445,127 @@ function sanitizeTimetableCellArray(checker: any) {
     if (!sanitizeTimetableCell(checker[i])) {
       return false;
     }
+  }
+  return true;
+}
+/** sst */
+function sanitizeGetDevieInfoRequest(checker: any) {
+  return true;
+}
+
+function sanitizePostDeviceApplyRequest(checker: any) {
+  if (
+    typeof checker.teacherUid == "string" &&
+    Boolean(checker.teacherUid.trim()) &&
+    !Number.isNaN(Number(checker.teacherUid))
+  ) {
+    checker.teacherUid = Number(checker.teacherUid);
+  }
+
+  if (
+    typeof checker.when == "string" &&
+    Boolean(checker.when.trim()) &&
+    !Number.isNaN(Number(checker.when))
+  ) {
+    checker.when = Number(checker.when);
+  }
+
+  if (
+    typeof checker.teacherUid != "number" ||
+    !sanitizeUserInfoArray(checker.applicants) ||
+    typeof checker.deviceId != "number" ||
+    typeof checker.purpose != "string" ||
+    typeof checker.when != "number"
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function sanitizeGetElectronicDeviceApplyRequest(checker: any) {
+  if (
+    typeof checker.when == "string" &&
+    Boolean(checker.when.trim()) &&
+    !Number.isNaN(Number(checker.when))
+  ) {
+    checker.when = Number(checker.when);
+  }
+
+  if (typeof checker.when != "number") {
+    return false;
+  }
+  return true;
+}
+
+function sanitizeDeleteElectronicDeviceApplyRequest(checker: any) {
+  if (
+    typeof checker.when == "string" &&
+    Boolean(checker.when.trim()) &&
+    !Number.isNaN(Number(checker.when))
+  ) {
+    checker.when = Number(checker.when);
+  }
+
+  if (typeof checker.when != "number") {
+    return false;
+  }
+  return true;
+}
+
+function sanitizePutElectronicDeviceInfoRequest(checker: any) {
+  if (!sanitizeElectroniceDevicefoArray(checker.information)) {
+    return false;
+  }
+  return true;
+}
+
+function sanitizeElectroniceDevicefoArray(checker: any) {
+  if (!Array.isArray(checker)) {
+    return false;
+  }
+  for (let i = 0; i < checker.length; i++) {
+    if (!sanitizeElectronicDeviceInfo(checker[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function sanitizeElectronicDeviceInfo(checker: any) {
+  if (
+    typeof checker.applyId == "string" &&
+    Boolean(checker.applyId.trim()) &&
+    !Number.isNaN(Number(checker.applyId))
+  ) {
+    checker.applyId = Number(checker.applyId);
+  }
+
+  if (
+    typeof checker.state == "string" &&
+    Boolean(checker.state.trim()) &&
+    !Number.isNaN(Number(checker.state))
+  ) {
+    checker.state = Number(checker.state);
+  }
+
+  if (
+    typeof checker.when == "string" &&
+    Boolean(checker.when.trim()) &&
+    !Number.isNaN(Number(checker.when))
+  ) {
+    checker.when = Number(checker.when);
+  }
+  if (
+    typeof checker.applyId != "number" ||
+    typeof checker.state != "number" ||
+    !sanitizeUserInfo(checker.master) ||
+    !sanitizeUserInfo(checker.teacher) ||
+    typeof checker.applicants != "string" ||
+    typeof checker.deviceId != "number" ||
+    typeof checker.purpose != "string" ||
+    typeof checker.when != "number"
+  ) {
+    return false;
   }
   return true;
 }

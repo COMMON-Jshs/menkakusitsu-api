@@ -2,6 +2,7 @@ import CommonApi from "@ireves/common-api";
 import dotenv from "dotenv";
 import fileUpload from "express-fileupload";
 import path from "path";
+import "./scheduler/timetableScheduler";
 
 import config from "@/config";
 import { initializeFirebase } from "@/firebase";
@@ -9,6 +10,7 @@ import { schedules } from "@/scheduler";
 import { customRouterMiddleware } from "@/middlewares";
 
 dotenv.config();
+dotenv.config({ path: ".env.production" });
 
 CommonApi.initializeConfig(config);
 initializeFirebase();

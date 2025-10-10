@@ -54,7 +54,7 @@ class Auth extends V1 {
     }
 
     const day = dayjs();
-    if (day.month() > 3) {
+    if (day.month() > 9) {
       throw new CommonApi.ResponseException(-1, "신입생 등록 기간이 아닙니다.");
     }
     const count = await CommonApi.getFirstAsync(
