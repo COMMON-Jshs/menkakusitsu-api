@@ -43,7 +43,7 @@ export async function fetchTimetableFromNeis(targetDate: string) {
   }
 }
 
-cron.schedule("0 3 * * *", async () => {
+cron.schedule("1 0 * * *", async () => {
   const target = new Date();
   target.setDate(target.getDate() + 1);
   const ymd =
